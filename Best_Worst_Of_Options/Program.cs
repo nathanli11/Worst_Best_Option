@@ -34,3 +34,26 @@ string filePath = "sp500_prices.csv";
 data.ExportToCsv(filePath);
 
 Console.WriteLine($"\n✅ Fichier CSV généré : {filePath}");
+
+
+
+// 1️⃣ Charger données et simuler
+var data = new Data(tickers);
+data.LoadCsv("C:\\Users\\you\\Documents\\prices.csv");
+data.ComputeCovarianceMatrix();
+
+var mc = new MonteCarlo(data);
+mc.Simulate(nbSimulations: 10000, nbDays: 252); // 1 an
+
+// 2️⃣ Créer des options Worst-Of / Best-Of
+Option callBest  = new Call(tickers, strike: 200.0, maturity: 1.0, payoffType: PayoffType.BestOf);
+Option callWorst = new Call(tickers, strike: 200.0, maturity: 1.0, payoffType: PayoffType.WorstOf);
+Option putBest   = new Put(tickers, strike: 200.0, maturity: 1.0, payoffType: PayoffType.BestOf);
+Option putWorst  = new Put(tickers, strike: 200.0, maturity: 1.0, payoffType: PayoffType.WorstOf);
+
+// 3️⃣ Prix Monte Carlo (avec taux sans risque 3%)
+double r = 0.03;
+Console.WriteLine($"Call Best-Of  : {mc.PriceOption(callBest, r):F2}");
+Console.WriteLine($"Call Worst-Of : {mc.PriceOption(callWorst, r):F2}");
+Console.WriteLine($"Put Best-Of   : {mc.PriceOption(putBest, r):F2}");
+Console.WriteLine($"Put Worst-Of  : {mc.PriceOption(putWorst, r):F2}");
