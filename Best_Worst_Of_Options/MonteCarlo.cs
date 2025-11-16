@@ -5,6 +5,7 @@ using System;
 public class MonteCarlo
 {
     private readonly Data data;
+    private double[,,]? Simulations { get; set; }
 
     public MonteCarlo(Data data)
     {
@@ -17,7 +18,7 @@ public class MonteCarlo
     /// <param name="nbSimulations">Nombre de simulations à générer.</param>
     /// <param name="nbDays">Nombre de jours à simuler.</param>
     /// <returns>Un tableau [nbSimulations, nbDays, nbTickers]</returns>
-    public double[,,] Simulate(int nbSimulations, int nbDays)
+    public void Simulate(int nbSimulations, int nbDays)
     {
         int m = data.Tickers.Count;
         double[,,] simulations = new double[nbSimulations, nbDays, m];
@@ -57,7 +58,7 @@ public class MonteCarlo
             }
         }
 
-        return simulations;
+        Simulations = simulations;
     }
 
     // === Méthodes utilitaires ===
@@ -101,12 +102,12 @@ public class MonteCarlo
     /// <returns>Prix théorique actuel de l’option.</returns>
     public double PriceOption(Option option, double riskFreeRate)
     {
-        if (sims == null)
+        if (Simulations == null)
             throw new InvalidOperationException("Aucune simulation trouvée. Exécutez Simulate() avant.");
 
-        int nbSim = sims.GetLength(0);
-        int nbDays = sims.GetLength(1);
-        int nbTickers = sims.GetLength(2);
+        int nbSim = Simulations.GetLength(0);
+        int nbDays = Simulations.GetLength(1);
+        int nbTickers = Simulations.GetLength(2);
         int lastDay = nbDays - 1;
 
         double sumPayoff = 0.0;
@@ -115,13 +116,13 @@ public class MonteCarlo
         {
             double[] finalPrices = new double[nbTickers];
             for (int i = 0; i < nbTickers; i++)
-                finalPrices[i] = sims[s, lastDay, i];
+                finalPrices[i] = Simulations[s, lastDay, i];
 
             sumPayoff += option.Payoff(finalPrices);
         }
 
         double meanPayoff = sumPayoff / nbSim;
-        double discounted = Math.Exp(-riskFreeRate * option.Maturity) * meanPayoff;
+        double discounted = Math.Exp(-riskFreeRate * option.TimeToMaturity) * meanPayoff;
 
         return discounted;
     }

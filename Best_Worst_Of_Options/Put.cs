@@ -8,8 +8,8 @@ namespace Best_Worst_Of_Options;
 /// </summary>
 public class Put : Option
 {
-    public Put(IEnumerable<string> underlyings, double strike, double maturity, PayoffType payoffType)
-        : base(underlyings, strike, maturity, payoffType)
+    public Put(List<Stock> underlyings, double strike, DateTime pricingDate, DateTime maturityDate, PayoffType payoffType)
+        : base(underlyings, strike, pricingDate, maturityDate, payoffType)
     {
     }
 
@@ -18,4 +18,8 @@ public class Put : Option
         double selected = SelectUnderlyingValue(finalPrices);
         return Math.Max(Strike - selected, 0.0);
     }
+
+    // Methode price (override de Option) qui calcule la date de maturité avec TimeToMaturity et PricingDate
+    // et qui appelle MonteCarlo pour simuler les prix des stocks pendant la durée de vie de l'option
+
 }
