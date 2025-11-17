@@ -1,6 +1,5 @@
 namespace Best_Worst_Of_Options;
 
-
 public enum PayoffType
 {
     BestOf,
@@ -10,19 +9,23 @@ public enum PayoffType
 public abstract class Option
 {
     public double Strike { get; }
-    public double Maturity { get; } // en années
-    public IReadOnlyList<string> Underlyings { get; }
+    public DateTime PricingDate { get; }
+    public DateTime MaturityDate { get; }
+    public double TimeToMaturity { get; } // en années
+    public List<Stock> Underlyings { get; }
     public PayoffType PayoffType { get; }
 
-    protected Option(IEnumerable<string> underlyings, double strike, double maturity, PayoffType payoffType)
+    protected Option(List<Stock> underlyings, double strike, DateTime pricingDate, DateTime maturityDate, PayoffType payoffType)
     {
         if (underlyings == null) throw new ArgumentNullException(nameof(underlyings));
         var list = underlyings.ToList();
         if (!list.Any()) throw new ArgumentException("Il faut au moins un sous-jacent.", nameof(underlyings));
 
-        Underlyings = list.AsReadOnly();
+        Underlyings = underlyings;
         Strike = strike;
-        Maturity = maturity;
+        PricingDate = pricingDate;
+        MaturityDate = maturityDate;
+        TimeToMaturity = (MaturityDate - PricingDate).TotalDays / 365.0;
         PayoffType = payoffType;
     }
 

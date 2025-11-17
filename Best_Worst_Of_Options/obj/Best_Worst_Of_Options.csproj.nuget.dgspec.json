@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "/Users/marcjehannin/Desktop/M2/COURS/C#/Project/Worst_Best_Option/Best_Worst_Of_Options/Best_Worst_Of_Options.csproj": {}
+    "/Users/mba/Desktop/Cours/C_sharp/Worst_Best_Option/Best_Worst_Of_Options/Best_Worst_Of_Options.csproj": {}
   },
   "projects": {
-    "/Users/marcjehannin/Desktop/M2/COURS/C#/Project/Worst_Best_Option/Best_Worst_Of_Options/Best_Worst_Of_Options.csproj": {
+    "/Users/mba/Desktop/Cours/C_sharp/Worst_Best_Option/Best_Worst_Of_Options/Best_Worst_Of_Options.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/marcjehannin/Desktop/M2/COURS/C#/Project/Worst_Best_Option/Best_Worst_Of_Options/Best_Worst_Of_Options.csproj",
+        "projectUniqueName": "/Users/mba/Desktop/Cours/C_sharp/Worst_Best_Option/Best_Worst_Of_Options/Best_Worst_Of_Options.csproj",
         "projectName": "Best_Worst_Of_Options",
-        "projectPath": "/Users/marcjehannin/Desktop/M2/COURS/C#/Project/Worst_Best_Option/Best_Worst_Of_Options/Best_Worst_Of_Options.csproj",
-        "packagesPath": "/Users/marcjehannin/.nuget/packages/",
-        "outputPath": "/Users/marcjehannin/Desktop/M2/COURS/C#/Project/Worst_Best_Option/Best_Worst_Of_Options/obj/",
+        "projectPath": "/Users/mba/Desktop/Cours/C_sharp/Worst_Best_Option/Best_Worst_Of_Options/Best_Worst_Of_Options.csproj",
+        "packagesPath": "/Users/mba/.nuget/packages/",
+        "outputPath": "/Users/mba/Desktop/Cours/C_sharp/Worst_Best_Option/Best_Worst_Of_Options/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/Users/marcjehannin/.nuget/NuGet/NuGet.Config"
+          "/Users/mba/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net9.0"

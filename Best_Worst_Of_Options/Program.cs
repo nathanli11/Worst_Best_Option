@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using YahooFinanceApi;
 
 using Best_Worst_Of_Options; // namespace de la classe Data
+
+/*
 var tickers = new List<string> { "AAPL", "MSFT", "GOOG" };
 DateTime startDate = DateTime.Now.AddYears(-3);
 DateTime endDate = DateTime.Now;
@@ -30,10 +32,6 @@ data.ExportToCsv(filePath);
 
 Console.WriteLine($"\n✅ Fichier CSV généré : {filePath}");
 
-
-
-// 1️⃣ Charger données et simuler
-var data = new Data(tickers);
 data.LoadCsv("C:\\Users\\you\\Documents\\prices.csv");
 data.ComputeCovarianceMatrix();
 
@@ -52,3 +50,21 @@ Console.WriteLine($"Call Best-Of  : {mc.PriceOption(callBest, r):F2}");
 Console.WriteLine($"Call Worst-Of : {mc.PriceOption(callWorst, r):F2}");
 Console.WriteLine($"Put Best-Of   : {mc.PriceOption(putBest, r):F2}");
 Console.WriteLine($"Put Worst-Of  : {mc.PriceOption(putWorst, r):F2}");
+*/
+
+
+// Charger les données du marché depuis un CSV dans un objet Market
+string csvPath = "/Users/mba/Desktop/Cours/C_sharp/Worst_Best_Option/market_data.csv";
+var market = new Market(csvPath);
+market.ShowMarketData();
+
+// Exemple d'accès à un stock
+var apple = market["AAPL"];
+Console.WriteLine($"Apple historical prices data points: {apple.HistoricalPrices.Count}");
+
+// Exemple de création d'une option
+var underlyings = new List<Stock> { market["AAPL"], market["MSFT"], market["GOOG"] };
+var bestOfCallOption = new Call(underlyings, strike: 150.0, pricingDate: DateTime.Now, 
+                                maturityDate: DateTime.Now.AddYears(1), payoffType: PayoffType.BestOf);
+Console.WriteLine($"Created a Best-Of Call option with strike {bestOfCallOption.Strike}" + 
+                    $" and time to maturity {bestOfCallOption.TimeToMaturity:F2} year(s).");
