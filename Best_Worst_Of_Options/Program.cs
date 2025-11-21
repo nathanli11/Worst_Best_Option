@@ -54,8 +54,8 @@ Console.WriteLine($"Put Worst-Of  : {mc.PriceOption(putWorst, r):F2}");
 
 
 // Charger les données du marché depuis un CSV dans un objet Market
-string csvPath = "/Users/mba/Desktop/Cours/C_sharp/Worst_Best_Option/market_data.csv";
-var market = new Market(csvPath);
+//string csvPath = "/Users/mba/Desktop/Cours/C_sharp/Worst_Best_Option/market_data.csv";
+var market = new Market("market_data.csv");
 market.ShowMarketData();
 
 // Exemple d'accès à un stock
@@ -68,3 +68,20 @@ var bestOfCallOption = new Call(underlyings, strike: 150.0, pricingDate: DateTim
                                 maturityDate: DateTime.Now.AddYears(1), payoffType: PayoffType.BestOf);
 Console.WriteLine($"Created a Best-Of Call option with strike {bestOfCallOption.Strike}" + 
                     $" and time to maturity {bestOfCallOption.TimeToMaturity:F2} year(s).");
+
+// Monte Carlo Simulations
+Console.WriteLine("\n Running Monte Carlo simulations...");
+int days=30;
+int numPaths = 5;
+var simulation = market.MonteCarloSimulations(days, numPaths);
+
+Console.WriteLine($"\n Monte Carlo simulations for {days} days and {numPaths} paths:");
+foreach (var ticker in simulation.Keys)
+{
+    Console.WriteLine($"\nTicker: {ticker}");
+    var firstTrajectory = simulation[ticker][0];
+    for (int day=0; day <= days; day++)
+    {
+        Console.WriteLine($" Day {day}: {firstTrajectory[day]:F2}");
+    }
+}

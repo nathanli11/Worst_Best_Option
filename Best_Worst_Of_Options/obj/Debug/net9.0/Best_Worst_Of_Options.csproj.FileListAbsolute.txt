@@ -42,3 +42,4 @@
 /Users/mba/Desktop/Cours/C_sharp/Worst_Best_Option/Best_Worst_Of_Options/obj/Debug/net9.0/Best_Wor.9623C728.Up2Date
 /Users/mba/Desktop/Cours/C_sharp/Worst_Best_Option/Best_Worst_Of_Options/obj/Debug/net9.0/Best_Worst_Of_Options.genruntimeconfig.cache
 /Users/mba/Desktop/Cours/C_sharp/Worst_Best_Option/Best_Worst_Of_Options/obj/Debug/net9.0/ref/Best_Worst_Of_Options.dll
+/Users/liessenathan/Desktop/M2/CSharpe/Projet/Best_Worst_Of_Options/bin/Debug/net9.0/market_data.csv

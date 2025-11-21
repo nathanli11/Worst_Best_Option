@@ -8,7 +8,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="CsvHelper" Version="33.1.0" />
     <PackageReference Include="YahooFinanceApi" Version="2.3.3" />
   </ItemGroup>
+
+  <ItemGroup>
+  <None Update="market_data.csv">
+    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+  </None>
+</ItemGroup>
+
 
 </Project>

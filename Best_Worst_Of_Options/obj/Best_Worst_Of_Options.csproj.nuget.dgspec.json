@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "/Users/mba/Desktop/Cours/C_sharp/Worst_Best_Option/Best_Worst_Of_Options/Best_Worst_Of_Options.csproj": {}
+    "/Users/liessenathan/Desktop/M2/CSharpe/Projet/Best_Worst_Of_Options/Best_Worst_Of_Options.csproj": {}
   },
   "projects": {
-    "/Users/mba/Desktop/Cours/C_sharp/Worst_Best_Option/Best_Worst_Of_Options/Best_Worst_Of_Options.csproj": {
+    "/Users/liessenathan/Desktop/M2/CSharpe/Projet/Best_Worst_Of_Options/Best_Worst_Of_Options.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/mba/Desktop/Cours/C_sharp/Worst_Best_Option/Best_Worst_Of_Options/Best_Worst_Of_Options.csproj",
+        "projectUniqueName": "/Users/liessenathan/Desktop/M2/CSharpe/Projet/Best_Worst_Of_Options/Best_Worst_Of_Options.csproj",
         "projectName": "Best_Worst_Of_Options",
-        "projectPath": "/Users/mba/Desktop/Cours/C_sharp/Worst_Best_Option/Best_Worst_Of_Options/Best_Worst_Of_Options.csproj",
-        "packagesPath": "/Users/mba/.nuget/packages/",
-        "outputPath": "/Users/mba/Desktop/Cours/C_sharp/Worst_Best_Option/Best_Worst_Of_Options/obj/",
+        "projectPath": "/Users/liessenathan/Desktop/M2/CSharpe/Projet/Best_Worst_Of_Options/Best_Worst_Of_Options.csproj",
+        "packagesPath": "/Users/liessenathan/.nuget/packages/",
+        "outputPath": "/Users/liessenathan/Desktop/M2/CSharpe/Projet/Best_Worst_Of_Options/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/Users/mba/.nuget/NuGet/NuGet.Config"
+          "/Users/liessenathan/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
@@ -44,6 +44,10 @@
         "net9.0": {
           "targetAlias": "net9.0",
           "dependencies": {
+            "CsvHelper": {
+              "target": "Package",
+              "version": "[33.1.0, )"
+            },
             "YahooFinanceApi": {
               "target": "Package",
               "version": "[2.3.3, )"
