@@ -2,75 +2,52 @@ namespace Best_Worst_Of_Options;
 
 using System;
 
-public class MonteCarlo
+public static class MonteCarlo
 {
-    private readonly Data data;
-    private double[,,]? Simulations { get; set; }
-
-    public MonteCarlo(Data data)
+    // Tirage dans un échantillon normal standard
+    private static double NormalSample(Random rng)
     {
-        this.data = data;
-    }
-
-    /// <summary>
-    /// Simule des trajectoires de prix via un modèle de Brownien géométrique.
-    /// </summary>
-    /// <param name="nbSimulations">Nombre de simulations à générer.</param>
-    /// <param name="nbDays">Nombre de jours à simuler.</param>
-    /// <returns>Un tableau [nbSimulations, nbDays, nbTickers]</returns>
-    public void Simulate(int nbSimulations, int nbDays)
-    {
-        int m = data.Tickers.Count;
-        double[,,] simulations = new double[nbSimulations, nbDays, m];
-
-        double[,] chol = CholeskyDecomposition(data.CovMatrix);
-        Random rnd = new Random();
-
-        for (int s = 0; s < nbSimulations; s++)
-        {
-            double[] currentPrices = data.Prices[^1]; // dernier prix
-
-            for (int t = 0; t < nbDays; t++)
-            {
-                double[] z = new double[m];
-                for (int i = 0; i < m; i++)
-                    z[i] = NormalSample(rnd);
-
-                // Appliquer Cholesky pour corréler les chocs
-                double[] correlatedZ = new double[m];
-                for (int i = 0; i < m; i++)
-                {
-                    correlatedZ[i] = 0;
-                    for (int j = 0; j <= i; j++)
-                        correlatedZ[i] += chol[i, j] * z[j];
-                }
-
-                // Générer les nouveaux prix
-                for (int i = 0; i < m; i++)
-                {
-                    double mu = data.MeanReturns[i];
-                    double sigma = Math.Sqrt(data.CovMatrix[i, i]);
-                    double drift = mu - 0.5 * sigma * sigma;
-                    double shock = sigma * correlatedZ[i];
-                    currentPrices[i] *= Math.Exp(drift + shock);
-                    simulations[s, t, i] = currentPrices[i];
-                }
-            }
-        }
-
-        Simulations = simulations;
-    }
-
-    // === Méthodes utilitaires ===
-
-    private static double NormalSample(Random rnd)
-    {
-        // Génère un échantillon de N(0,1)
-        double u1 = 1.0 - rnd.NextDouble();
-        double u2 = 1.0 - rnd.NextDouble();
+        // Box-Muller transform
+        double u1 = 1.0 - rng.NextDouble();
+        double u2 = 1.0 - rng.NextDouble();
         return Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Cos(2.0 * Math.PI * u2);
     }
 
+    // Calculer la matrice de covariance des rendements historiques
+    private static double[,] ComputeCovarianceMatrix(List<double[]> HistoricalReturns)
+    {
+        int n = HistoricalReturns.Count;
+        double[,] covMatrix = new double[n, n];
+
+        // Pré-calcul des moyennes
+        double[] means = HistoricalReturns
+            .Select(r => r.Average())
+            .ToArray();
+
+        for (int i = 0; i < n; i++)
+        {
+            for (int j = 0; j < n; j++)
+            {
+                double[] Ri = HistoricalReturns[i];
+                double[] Rj = HistoricalReturns[j];
+
+                int len = Math.Min(Ri.Length, Rj.Length);
+                double sum = 0.0;
+
+                for (int k = 0; k < len; k++)
+                {
+                    sum += (Ri[k] - means[i]) * (Rj[k] - means[j]);
+                }
+
+                double cov = sum / (len - 1);
+                covMatrix[i, j] = cov;
+                covMatrix[j, i] = cov;
+            }
+        }
+        return covMatrix;
+    }
+
+    // Faire une décomposition de Cholesky
     private static double[,] CholeskyDecomposition(double[,] matrix)
     {
         int n = matrix.GetLength(0);
@@ -90,42 +67,111 @@ public class MonteCarlo
                     L[i, j] = (matrix[i, j] - sum) / L[j, j];
             }
         }
-
         return L;
     }
 
-    /// <summary>
-    /// Calcule le prix d'une option par Monte Carlo.
-    /// </summary>
-    /// <param name="option">Option à évaluer (Call ou Put).</param>
-    /// <param name="riskFreeRate">Taux sans risque annuel (ex : 0.03 pour 3%).</param>
-    /// <returns>Prix théorique actuel de l’option.</returns>
-    public double PriceOption(Option option, double riskFreeRate)
+
+    // Simuler les prix des sous-jacents à la date de maturité
+    // Deux cas : la date de pricing est contenue dans les données historiques ou pas
+    public static Dictionary<Stock, double> MonteCarloSimulations(
+        List<Stock> Underlyings,
+        DateTime PricingDate,
+        DateTime MaturityDate,
+        int numPaths)
     {
-        if (Simulations == null)
-            throw new InvalidOperationException("Aucune simulation trouvée. Exécutez Simulate() avant.");
+        int n = Underlyings.Count;
+        // Prix initiaux
+        Dictionary<Stock, double> S0 = new Dictionary<Stock, double> ();
+        // Prix finaux moyens après simulation
+        Dictionary<Stock, double> FinalPrices = Underlyings.ToDictionary(s => s, s => 0.0);
 
-        int nbSim = Simulations.GetLength(0);
-        int nbDays = Simulations.GetLength(1);
-        int nbTickers = Simulations.GetLength(2);
-        int lastDay = nbDays - 1;
+        // Definir la date de début de la simulation
+        DateTime lastKnownDate = Underlyings.Min(s => s.HistoricalPrices.Keys.Max());
+        bool pricingDateIsKnown = PricingDate <= lastKnownDate;
+        DateTime startingDate = pricingDateIsKnown
+            ? Underlyings
+                .Select(udl => udl.HistoricalPrices.Keys
+                    .Where(d => d <= PricingDate)
+                    .Max()
+                    )
+                .Max()
+            : lastKnownDate;
 
-        double sumPayoff = 0.0;
+        // Défnir le nombre de jours à simuler
+        int totalDays = (MaturityDate - startingDate).Days;
+        
+        // Rendements historiques des actifs
+        List<double[]> HistoricalReturns = new List<double[]>();
 
-        for (int s = 0; s < nbSim; s++)
+        foreach (var udl in Underlyings)
         {
-            double[] finalPrices = new double[nbTickers];
-            for (int i = 0; i < nbTickers; i++)
-                finalPrices[i] = Simulations[s, lastDay, i];
+            // Récupérer le prix initial
+            S0[udl] = udl.HistoricalPrices[startingDate];
 
-            sumPayoff += option.Payoff(finalPrices);
+            // Calculer les rendements historiques
+            var prices = udl.HistoricalPrices
+                .Where(h => h.Key <= startingDate)
+                .OrderBy(h => h.Key)
+                .Select(h => h.Value)
+                .ToArray();
+
+            double[] returns = new double[prices.Length - 1];
+            for (int i = 1; i < prices.Length; i++)
+            {
+                returns[i - 1] = Math.Log(prices[i] / prices[i - 1]);
+            }
+            HistoricalReturns.Add(returns);
         }
 
-        double meanPayoff = sumPayoff / nbSim;
-        double discounted = Math.Exp(-riskFreeRate * option.TimeToMaturity) * meanPayoff;
+        // Matrice de covariance et décomposition de Cholesky
+        double[,] covMatrix = ComputeCovarianceMatrix(HistoricalReturns);
+        double[,] chol = CholeskyDecomposition(covMatrix);
 
-        return discounted;
+        // Calcul des drifts (moyenne historique des rendements)
+        double[] means = HistoricalReturns.Select(r => r.Average()).ToArray();
+
+        
+        // accumulateurs pour la moyenne des prix finaux
+        double[] accumulated = new double[n];
+
+        Random rng = new Random();
+        for (int path = 0; path < numPaths; path++)
+        {
+            // copie des prix courants
+            double[] prices = Underlyings.Select(u => S0[u]).ToArray();
+
+            for (int day = 0; day < totalDays; day++)
+            {
+                // Tirage multi-dimensionnel normal corrélé via Cholesky
+                double[] Z = new double[n];
+                for (int i = 0; i < n; i++)
+                    Z[i] = NormalSample(rng);
+
+                double[] correlatedZ = new double[n];
+                for (int i = 0; i < n; i++)
+                {
+                    correlatedZ[i] = 0.0;
+                    for (int j = 0; j < n; j++)
+                        correlatedZ[i] += chol[i, j] * Z[j];
+                }
+
+                // Update des prix journaliers
+                for (int i = 0; i < n; i++)
+                {
+                    prices[i] *= Math.Exp(means[i] + correlatedZ[i]);
+                }
+            }
+
+            // Ajout au cumul pour la moyenne
+            for (int i = 0; i < n; i++)
+                accumulated[i] += prices[i];
+        }
+
+        // Moyennage des prix simulés
+        for (int i = 0; i < n; i++)
+            FinalPrices[Underlyings[i]] = accumulated[i] / numPaths;
+
+        return FinalPrices;
     }
-
 }
 
