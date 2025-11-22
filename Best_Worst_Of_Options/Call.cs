@@ -11,16 +11,12 @@ public class Call : Option
     {
     }
 
-    public override double Payoff()
+    public override double Payoff(Dictionary<Stock, double> prices)
     {
-        double underlyingValue = FinalPrices[SelectUnderlying()];
-        Console.WriteLine($" Selected underlying for payoff: {SelectUnderlying().Ticker}");
-        Console.WriteLine($" Selected underlying value for payoff: {underlyingValue:F2}");
+        Stock underlying = SelectUnderlying(prices);
+        double underlyingValue = prices[underlying];
 
         return Math.Max(underlyingValue - Strike, 0.0);
     }
-
-    // Methode price (override de Option) qui calcule la date de maturité avec TimeToMaturity et PricingDate
-    // et qui appelle MonteCarlo pour simuler les prix des stocks pendant la durée de vie de l'option
 }
 

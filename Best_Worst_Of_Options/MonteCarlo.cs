@@ -73,7 +73,7 @@ public static class MonteCarlo
 
     // Simuler les prix des sous-jacents à la date de maturité
     // Deux cas : la date de pricing est contenue dans les données historiques ou pas
-    public static Dictionary<Stock, double> MonteCarloSimulations(
+    public static Dictionary<Stock, double[]> MonteCarloSimulations(
         List<Stock> Underlyings,
         DateTime PricingDate,
         DateTime MaturityDate,
@@ -82,8 +82,8 @@ public static class MonteCarlo
         int n = Underlyings.Count;
         // Prix initiaux
         Dictionary<Stock, double> S0 = new Dictionary<Stock, double> ();
-        // Prix finaux moyens après simulation
-        Dictionary<Stock, double> FinalPrices = Underlyings.ToDictionary(s => s, s => 0.0);
+        // Prix finaux pour chaque sous-jacent et chaque simulations
+        Dictionary<Stock, double[]> FinalPrices = Underlyings.ToDictionary(s => s, s => new double[numPaths]);
 
         // Definir la date de début de la simulation
         DateTime lastKnownDate = Underlyings.Min(s => s.HistoricalPrices.Keys.Max());
@@ -99,7 +99,7 @@ public static class MonteCarlo
 
         // Défnir le nombre de jours à simuler
         int totalDays = (MaturityDate - startingDate).Days;
-        
+
         // Rendements historiques des actifs
         List<double[]> HistoricalReturns = new List<double[]>();
 
@@ -130,10 +130,6 @@ public static class MonteCarlo
         // Calcul des drifts (moyenne historique des rendements)
         double[] means = HistoricalReturns.Select(r => r.Average()).ToArray();
 
-        
-        // accumulateurs pour la moyenne des prix finaux
-        double[] accumulated = new double[n];
-
         Random rng = new Random();
         for (int path = 0; path < numPaths; path++)
         {
@@ -162,14 +158,12 @@ public static class MonteCarlo
                 }
             }
 
-            // Ajout au cumul pour la moyenne
+            // Stockage des prix finaux
             for (int i = 0; i < n; i++)
-                accumulated[i] += prices[i];
+            {
+                FinalPrices[Underlyings[i]][path] = prices[i];
+            }
         }
-
-        // Moyennage des prix simulés
-        for (int i = 0; i < n; i++)
-            FinalPrices[Underlyings[i]] = accumulated[i] / numPaths;
 
         return FinalPrices;
     }

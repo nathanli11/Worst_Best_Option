@@ -74,13 +74,17 @@ Console.WriteLine($"Created a Best-Of Call option with strike {bestOfCallOption.
 DateTime start = new DateTime(2025, 1, 1);
 DateTime end = new DateTime(2026, 1, 1);
 
-var prices = MonteCarlo.MonteCarloSimulations(underlyings, start, end, numPaths: 10000);
-
-Console.WriteLine("\n Monte Carlo simulated final prices at maturity:");
+Dictionary<Stock, double[]> prices = MonteCarlo.MonteCarloSimulations(underlyings, start, end, numPaths: 10000);
+Console.WriteLine($"\n Monte Carlo simulations from {start:yyyy-MM-dd} to {end:yyyy-MM-dd}:");
 foreach (var stock in prices.Keys)
 {
-    Console.WriteLine($" Ticker: {stock.Ticker}, Simulated Price: {prices[stock]:F2}");
-}  
+    Console.WriteLine($"\nTicker: {stock.Ticker}");
+    var firstTrajectory = prices[stock];
+    for (int day=0; day <= 10; day++)
+    {
+        Console.WriteLine($" Day {day}: {firstTrajectory[day]:F2}");
+    }
+}
 
 // Test Pricing
 

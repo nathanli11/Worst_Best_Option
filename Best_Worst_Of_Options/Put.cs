@@ -11,13 +11,11 @@ public class Put : Option
     {
     }
 
-    public override double Payoff()
+    public override double Payoff(Dictionary<Stock, double> prices)
     {
-        double underlyingValue = FinalPrices[SelectUnderlying()];
+        Stock underlying = SelectUnderlying(prices);
+        double underlyingValue = prices[underlying];
+
         return Math.Max(Strike - underlyingValue, 0.0);
     }
-
-    // Methode price (override de Option) qui calcule la date de maturité avec TimeToMaturity et PricingDate
-    // et qui appelle MonteCarlo pour simuler les prix des stocks pendant la durée de vie de l'option
-
 }
