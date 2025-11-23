@@ -4,7 +4,6 @@ using System.Globalization;   // ← obligatoire pour CultureInfo
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using YahooFinanceApi;
 
 using Best_Worst_Of_Options; // namespace de la classe Data
 
@@ -64,11 +63,35 @@ Console.WriteLine($"Apple historical prices data points: {apple.HistoricalPrices
 
 // Exemple de création d'une option
 var underlyings = new List<Stock> { market["AAPL"], market["MSFT"], market["GOOG"] };
-var bestOfCallOption = new Call(underlyings, strike: 150.0, pricingDate: DateTime.Now, 
-                                maturityDate: DateTime.Now.AddYears(1), payoffType: PayoffType.BestOf);
+var bestOfCallOption = new Call(underlyings, strike: 500.0, pricingDate: DateTime.Now, 
+                                maturityDate: DateTime.Now.AddYears(1), payoffType: PayoffType.BestOf, rate: 0.02);
+
 Console.WriteLine($"Created a Best-Of Call option with strike {bestOfCallOption.Strike}" + 
                     $" and time to maturity {bestOfCallOption.TimeToMaturity:F2} year(s).");
 
+// Test Monte Carlo Simulations
+
+DateTime start = new DateTime(2025, 1, 1);
+DateTime end = new DateTime(2026, 1, 1);
+
+Dictionary<Stock, double[]> prices = MonteCarlo.MonteCarloSimulations(underlyings, start, end, numPaths: 10000);
+Console.WriteLine($"\n Monte Carlo simulations from {start:yyyy-MM-dd} to {end:yyyy-MM-dd}:");
+foreach (var stock in prices.Keys)
+{
+    Console.WriteLine($"\nTicker: {stock.Ticker}");
+    var firstTrajectory = prices[stock];
+    for (int day=0; day <= 10; day++)
+    {
+        Console.WriteLine($" Day {day}: {firstTrajectory[day]:F2}");
+    }
+}
+
+// Test Pricing
+
+double call_price = bestOfCallOption.Price();
+Console.WriteLine($"\n Best-Of Call option price (Monte Carlo): {call_price:F2}");
+
+/*
 // Monte Carlo Simulations
 Console.WriteLine("\n Running Monte Carlo simulations...");
 int days=30;
@@ -85,3 +108,4 @@ foreach (var ticker in simulation.Keys)
         Console.WriteLine($" Day {day}: {firstTrajectory[day]:F2}");
     }
 }
+*/

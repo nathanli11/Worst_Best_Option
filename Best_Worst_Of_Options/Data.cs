@@ -130,6 +130,8 @@ public class Data
     {
         Tickers = tickers;
         Prices = new List<double[]>();
+        MeanReturns = new double[tickers.Count];
+        CovMatrix = new double[tickers.Count, tickers.Count];
     }
 
 }
