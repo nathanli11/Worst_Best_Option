@@ -12,3 +12,4 @@ obj/
 # Ignore all CSV except those explicitly included
 *.csv
 !/Best_Worst_Of_Options/market_data.csv
+

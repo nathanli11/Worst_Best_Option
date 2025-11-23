@@ -18,5 +18,9 @@
   </None>
 </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="Best_Worst_Of_Options.csproj" />
+  </ItemGroup>
+
 
 </Project>
