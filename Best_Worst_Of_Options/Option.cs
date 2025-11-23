@@ -36,7 +36,7 @@ public abstract class Option
         // Appeler MonteCarlo pour simuler les prix des stocks pendant la durée de vie de l'option
         // Appeler payoff pour calculer le payoff à l'échéance
         // Retourner la valeur actualisée du payoff
-        var finalPrices = MonteCarlo.MonteCarloSimulations(Underlyings, PricingDate, MaturityDate, nbSimulations);
+        var finalPrices = MonteCarlo.MonteCarloSimulations(Underlyings, PricingDate, MaturityDate, nbSimulations, riskFreeRate:0.02);
 
         double[] payoffs = new double[nbSimulations];
         for (int i = 0; i < nbSimulations; i++)

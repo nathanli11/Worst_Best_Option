@@ -74,7 +74,7 @@ Console.WriteLine($"Created a Best-Of Call option with strike {bestOfCallOption.
 DateTime start = new DateTime(2025, 1, 1);
 DateTime end = new DateTime(2026, 1, 1);
 
-Dictionary<Stock, double[]> prices = MonteCarlo.MonteCarloSimulations(underlyings, start, end, numPaths: 10000);
+Dictionary<Stock, double[]> prices = MonteCarlo.MonteCarloSimulations(underlyings, start, end, numPaths: 10000, riskFreeRate:0.02);
 Console.WriteLine($"\n Monte Carlo simulations from {start:yyyy-MM-dd} to {end:yyyy-MM-dd}:");
 foreach (var stock in prices.Keys)
 {
