@@ -1,49 +1,50 @@
-namespace Best_Worst_Of_Options;
-
-public static class Grecs
+namespace Best_Worst_Of_Options
 {
-    /// <summary>
-    /// Calcule le vecteur Delta pour une option multi-sous-jacents.
-    /// en utilisant la méthode "bump and revalue"
-    /// </summary>
-    public static double[] Delta(Option option, double h = 0.01, int numPaths = 5000)
+    public static class Grecs
     {
-        // Récupération du nombre de sous jacent de l option
-        int n = option.Underlyings.Count;
-
-        // Creation du vecteur resultat des deltas
-        double [] deltas = new double[n];
-
-        // Recuperation des spots initiaux
-        double [] S0 = option.Underlyings
-                        .Select(s => s.HistoricalPrices.Values.Last())
-                        .ToArray();
-        
-        // Pour chaque sous jacent
-        for (int i=0; i < n; i++)
+        /// <summary>
+        /// Calcule les deltas d’une option multi-actifs
+        /// via bump-and-revalue symétrique.
+        /// </summary>
+        public static double[] Delta(Option option, double h = 0.01, int numPaths = 5000)
         {
-            string ticker = option.Underlyings[i].Ticker;
-            var stock = option.Underlyings[i];
+            int n = option.Underlyings.Count;
+            double[] deltas = new double[n];
 
-            // Sauvegarde du spot price
-            double original = S0[i];
-            DateTime lastDate = stock.HistoricalPrices.Keys.Max();
+            // Lecture des spots initiaux à partir du dernier historique
+            double[] S0 = option.Underlyings
+                                .Select(s => s.HistoricalPrices.Values.Last())
+                                .ToArray();
 
-            // Bump up
-            stock.HistoricalPrices[lastDate] = original * (1+h);
-            double VPlus = option.Price(numPaths);
+            // Pour chaque sous-jacent
+            for (int i = 0; i < n; i++)
+            {
+                var stock = option.Underlyings[i];
+                DateTime lastDate = stock.HistoricalPrices.Keys.Max();
 
-            // Bump down
-            stock.HistoricalPrices[lastDate] = original * (1 - h);
-            double VMinus = option.Price(numPaths);
+                // Spot original
+                double original = S0[i];
 
-            // Restauration du spot price
-            stock.HistoricalPrices[lastDate] = original;
+                // --------------------------
+                //        BUMP UP
+                // --------------------------
+                stock.HistoricalPrices[lastDate] = original * (1.0 + h);
+                double Vplus = option.Price(numPaths);
 
-            // Calcul du delta
-            deltas[i] = (VPlus - VMinus) / (2.0 * h * original);
+                // --------------------------
+                //        BUMP DOWN
+                // --------------------------
+                stock.HistoricalPrices[lastDate] = original * (1.0 - h);
+                double Vminus = option.Price(numPaths);
+
+                // Restore
+                stock.HistoricalPrices[lastDate] = original;
+
+                // Delta
+                deltas[i] = (Vplus - Vminus) / (2.0 * h * original);
+            }
+
+            return deltas;
         }
-        return deltas;
     }
-
 }
