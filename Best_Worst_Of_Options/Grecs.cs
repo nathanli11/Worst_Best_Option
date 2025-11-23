@@ -1,50 +1,71 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 namespace Best_Worst_Of_Options
 {
-    public static class Grecs
+    public static class Greeks
     {
-        /// <summary>
-        /// Calcule les deltas d’une option multi-actifs
-        /// via bump-and-revalue symétrique.
-        /// </summary>
-        public static double[] Delta(Option option, double h = 0.01, int numPaths = 5000)
+        // ---------------------------------------------------------
+        // 🔥 Delta Pathwise
+        // ---------------------------------------------------------
+        public static double Delta(Option option, int nbSimulations = 10000)
         {
-            int n = option.Underlyings.Count;
-            double[] deltas = new double[n];
+            // 1️⃣ Simuler les paths
+            var paths = MonteCarlo.MonteCarloSimulations(
+                option.Underlyings,
+                option.PricingDate,
+                option.MaturityDate,
+                nbSimulations,
+                option.Rate
+            );
 
-            // Lecture des spots initiaux à partir du dernier historique
-            double[] S0 = option.Underlyings
-                                .Select(s => s.HistoricalPrices.Values.Last())
-                                .ToArray();
+            int lastDay = paths[option.Underlyings[0]].GetLength(1) - 1;
 
-            // Pour chaque sous-jacent
-            for (int i = 0; i < n; i++)
+            double[] deltas = new double[nbSimulations];
+
+            // 2️⃣ Boucle Monte Carlo
+            for (int p = 0; p < nbSimulations; p++)
             {
-                var stock = option.Underlyings[i];
-                DateTime lastDate = stock.HistoricalPrices.Keys.Max();
+                // Stockage des prix finaux
+                Dictionary<Stock, double> finalPrices = new();
+                foreach (var s in option.Underlyings)
+                    finalPrices[s] = paths[s][p, lastDay];
 
-                // Spot original
-                double original = S0[i];
+                // Sélection Best-Of / Worst-Of
+                var selected = option.PayoffType == PayoffType.BestOf
+                    ? finalPrices.OrderByDescending(x => x.Value).First().Key
+                    : finalPrices.OrderBy(x => x.Value).First().Key;
 
-                // --------------------------
-                //        BUMP UP
-                // --------------------------
-                stock.HistoricalPrices[lastDate] = original * (1.0 + h);
-                double Vplus = option.Price(numPaths);
+                double ST = finalPrices[selected];
+                double S0 = selected.HistoricalPrices.OrderBy(h => h.Key).Last().Value;
 
-                // --------------------------
-                //        BUMP DOWN
-                // --------------------------
-                stock.HistoricalPrices[lastDate] = original * (1.0 - h);
-                double Vminus = option.Price(numPaths);
+                // dPayoff/dST → dépend du type Call/Put
+                double dPayoff_dST = DerivativePayoff(option, ST);
 
-                // Restore
-                stock.HistoricalPrices[lastDate] = original;
+                // Pathwise: dST/dS0 = ST / S0
+                double dST_dS0 = ST / S0;
 
-                // Delta
-                deltas[i] = (Vplus - Vminus) / (2.0 * h * original);
+                deltas[p] = dPayoff_dST * dST_dS0;
             }
 
-            return deltas;
+            // 3️⃣ Moyenne + actualisation
+            return Math.Exp(-option.Rate  option.TimeToMaturity)  deltas.Average();
+        }
+
+
+        // ---------------------------------------------------------
+        // 🔥 Dérivée du payoff par rapport à S_T
+        // (appelle Call/Put via un cast sécurisé)
+        // ---------------------------------------------------------
+        private static double DerivativePayoff(Option option, double ST)
+        {
+            return option switch
+            {
+                Call c => ST > c.Strike ? 1.0 : 0.0,
+                Put p  => ST < p.Strike ? -1.0 : 0.0,
+                _      => throw new NotSupportedException("Type d’option non supporté pour Delta Pathwise.")
+            };
         }
     }
 }

@@ -7,25 +7,23 @@ namespace Best_Worst_Of_Options
     public static class MonteCarlo
     {
         // -----------------------
-        //    1. Gaussian sample
+        // 1. Gaussian generator (Box-Muller)
         // -----------------------
         private static double NormalSample(Random rng)
         {
-            // Box–Muller transform
             double u1 = 1.0 - rng.NextDouble();
             double u2 = 1.0 - rng.NextDouble();
             return Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Cos(2.0 * Math.PI * u2);
         }
 
         // -----------------------
-        // 2. Compute covariance (historical log-returns)
+        // 2. Compute empirical covariance (daily)
         // -----------------------
         private static double[,] ComputeCovarianceMatrix(List<double[]> returnsList)
         {
             int n = returnsList.Count;
             double[,] cov = new double[n, n];
 
-            // Means
             double[] means = returnsList.Select(r => r.Average()).ToArray();
 
             for (int i = 0; i < n; i++)
@@ -51,7 +49,7 @@ namespace Best_Worst_Of_Options
         }
 
         // -----------------------
-        // 3. Convert covariance → correlation
+        // 3. Covariance → correlation (daily)
         // -----------------------
         private static double[,] CovarianceToCorrelation(double[,] cov)
         {
@@ -66,7 +64,8 @@ namespace Best_Worst_Of_Options
             {
                 for (int j = 0; j < n; j++)
                 {
-                    corr[i, j] = cov[i, j] / (std[i] * std[j]);
+                    double raw = cov[i, j] / (std[i] * std[j]);
+                    corr[i, j] = Math.Clamp(raw, -1.0, 1.0);
                 }
             }
 
@@ -74,12 +73,15 @@ namespace Best_Worst_Of_Options
         }
 
         // -----------------------
-        // 4. Cholesky decomposition
+        // 4. Robust Cholesky decomposition
         // -----------------------
         private static double[,] Cholesky(double[,] A)
         {
             int n = A.GetLength(0);
             double[,] L = new double[n, n];
+
+            // small jitter for stability
+            double eps = 1e-10;
 
             for (int i = 0; i < n; i++)
             {
@@ -92,8 +94,7 @@ namespace Best_Worst_Of_Options
                     if (i == j)
                     {
                         double v = A[i, i] - sum;
-                        if (v <= 0)
-                            throw new Exception("Matrix not positive definite.");
+                        if (v <= 0) v = eps;     // jitter stabilizing
                         L[i, j] = Math.Sqrt(v);
                     }
                     else
@@ -106,10 +107,10 @@ namespace Best_Worst_Of_Options
             return L;
         }
 
-        // -----------------------
-        //      MAIN SIMULATOR
-        // -----------------------
-        public static Dictionary<Stock, double[]> MonteCarloSimulations(
+        // --------------------------------------------------------------------
+        // 5. FULL MONTE CARLO (DAILY PATHS) - robust & Best/Worst-of compatible
+        // --------------------------------------------------------------------
+        public static Dictionary<Stock, double[,]> MonteCarloSimulations(
             List<Stock> Underlyings,
             DateTime PricingDate,
             DateTime MaturityDate,
@@ -117,12 +118,16 @@ namespace Best_Worst_Of_Options
             double riskFreeRate)
         {
             int n = Underlyings.Count;
-            Dictionary<Stock, double[]> FinalPrices =
-                Underlyings.ToDictionary(s => s, s => new double[numPaths]);
+            int totalDays = (MaturityDate - PricingDate).Days;
 
-            // -----------------------
-            // 1. Extract historical log-returns
-            // -----------------------
+            // Output: each stock → [path, time]
+            var Paths = new Dictionary<Stock, double[,]>();
+            foreach (var s in Underlyings)
+                Paths[s] = new double[numPaths, totalDays + 1];
+
+            // ---------------------------------------------
+            // 1. Extract historical log-returns (daily)
+            // ---------------------------------------------
             List<double[]> returnsList = new List<double[]>();
             double[] S0 = new double[n];
 
@@ -137,6 +142,7 @@ namespace Best_Worst_Of_Options
                 double[] prices = sorted.Select(h => h.Value).ToArray();
                 S0[i] = prices.Last();
 
+                // log returns
                 double[] ret = new double[prices.Length - 1];
                 for (int k = 1; k < prices.Length; k++)
                     ret[k - 1] = Math.Log(prices[k] / prices[k - 1]);
@@ -144,49 +150,50 @@ namespace Best_Worst_Of_Options
                 returnsList.Add(ret);
             }
 
-            // -----------------------
-            // 2. Covariance -> vol -> correlation -> Cholesky
-            // -----------------------
+            // ---------------------------------------------
+            // 2. Covariance / correlation / Cholesky
+            // ---------------------------------------------
             double[,] cov = ComputeCovarianceMatrix(returnsList);
-            double[] sigma = new double[n];
-
-            for (int i = 0; i < n; i++)
-            {
-                double dailyVol = Math.Sqrt(cov[i, i]);
-                sigma[i] = dailyVol * Math.Sqrt(252.0);   // annualized vol
-            }
-
             double[,] corr = CovarianceToCorrelation(cov);
             double[,] chol = Cholesky(corr);
 
-            // -----------------------
+            // daily vols
+            double[] sigmaDaily = new double[n];
+            for (int i = 0; i < n; i++)
+                sigmaDaily[i] = Math.Sqrt(cov[i, i]);
+
+            // ---------------------------------------------
             // 3. Simulation parameters
-            // -----------------------
-            int totalDays = (MaturityDate - PricingDate).Days;
+            // ---------------------------------------------
             double dt = 1.0 / 252.0;
             double sqrtDt = Math.Sqrt(dt);
 
-            double[] drift = new double[n];
+            // daily risk-neutral drift
+            double[] driftDaily = new double[n];
             for (int i = 0; i < n; i++)
-                drift[i] = (riskFreeRate - 0.5 * sigma[i] * sigma[i]) * dt;
+                driftDaily[i] = (riskFreeRate - 0.5 * sigmaDaily[i] * sigmaDaily[i]) * dt;
 
             Random rng = new Random();
 
-            // -----------------------
-            // 4. Monte Carlo simulation
-            // -----------------------
+            // ---------------------------------------------
+            // 4. Monte Carlo simulation (full paths)
+            // ---------------------------------------------
             for (int p = 0; p < numPaths; p++)
             {
-                double[] prices = (double[])S0.Clone();
+                double[] spot = (double[])S0.Clone();
 
-                for (int day = 0; day < totalDays; day++)
+                // store S(0)
+                for (int i = 0; i < n; i++)
+                    Paths[Underlyings[i]][p, 0] = spot[i];
+
+                for (int day = 1; day <= totalDays; day++)
                 {
-                    // Generate Z ~ N(0, I)
+                    // Generate Z
                     double[] Z = new double[n];
                     for (int i = 0; i < n; i++)
                         Z[i] = NormalSample(rng);
 
-                    // Correlate: Y = chol * Z
+                    // Correlate: Y = L * Z
                     double[] Y = new double[n];
                     for (int i = 0; i < n; i++)
                     {
@@ -196,19 +203,16 @@ namespace Best_Worst_Of_Options
                         Y[i] = sum;
                     }
 
-                    // Update prices (lognormal risk-neutral)
+                    // Update spots
                     for (int i = 0; i < n; i++)
                     {
-                        prices[i] *= Math.Exp(drift[i] + sigma[i] * sqrtDt * Y[i]);
+                        spot[i] *= Math.Exp(driftDaily[i] + sigmaDaily[i] * sqrtDt * Y[i]);
+                        Paths[Underlyings[i]][p, day] = spot[i];
                     }
                 }
-
-                // Store final prices
-                for (int i = 0; i < n; i++)
-                    FinalPrices[Underlyings[i]][p] = prices[i];
             }
 
-            return FinalPrices;
+            return Paths;
         }
     }
 }
